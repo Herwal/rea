@@ -1,0 +1,34 @@
+name: Sync fork with upstream main
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fast-forward fork from upstream
+        env:
+          UPSTREAM_REPOSITORY: morluto/rea
+        run: |
+          git remote add upstream "https://github.com/${UPSTREAM_REPOSITORY}.git"
+          git fetch upstream main
+
+          if git merge-base --is-ancestor upstream/main origin/main; then
+            echo "Fork main is already up to date."
+          elif git merge-base --is-ancestor origin/main upstream/main; then
+            git push origin upstream/main:main
+          else
+            echo "Fork main and upstream main have diverged; refusing to overwrite fork history." >&2
+            exit 1
+          fi
